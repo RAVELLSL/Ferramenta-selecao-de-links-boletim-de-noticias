@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Seleção de Links</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --fundo: #f4f3ef;
+      --card: #ffffff;
+      --borda: #dedede;
+      --titulo: #2e4053;
+      --subtitulo: #5d6d7e;
+      --botao-add: #82e0aa;
+      --botao-remove: #f1948a;
+      --botao-copy: #85c1e9;
+      --texto: #34495e;
+      --destaque: #d35400;
+      --sombra: rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--fundo);
+      color: var(--texto);
+      display: flex;
+      justify-content: center;
+      padding: 30px 20px;
+    }
+
+    .conteudo {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--titulo);
+      margin-bottom: 40px;
+      font-size: 2em;
+    }
+
+    h2 {
+      color: var(--subtitulo);
+      font-size: 1.3em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .contador {
+      background-color: var(--botao-copy);
+      color: var(--card);
+      font-size: 0.8em;
+      padding: 4px 8px;
+      border-radius: 20px;
+      margin-left: 10px;
+    }
+
+    .categoria {
+      background-color: var(--card);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px var(--sombra);
+      border: 1px solid var(--borda);
+      margin-bottom: 30px;
+    }
+
+    .link-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    input[type="url"] {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--borda);
+      font-size: 0.95em;
+      width: 100%;
+    }
+
+    input[type="url"]:focus {
+      border-color: var(--subtitulo);
+      outline: none;
+    }
+
+    .btn {
+      padding: 8px 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+      margin-top: 5px;
+      font-size: 0.9em;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .btn-add {
+      background-color: var(--botao-add);
+      color: #145a32;
+      margin-top: 10px;
+    }
+
+    .btn-remove {
+      background-color: var(--botao-remove);
+      color: #641e16;
+    }
+
+    .btn-copy {
+      background-color: var(--botao-copy);
+      color: #154360;
+    }
+
+    .botoes {
+      display: flex;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .link-destaque {
+      font-weight: bold;
+      font-size: 1em;
+      color: var(--destaque);
+    }
+
+    @media (max-width: 600px) {
+      .btn {
+        width: 100%;
+      }
+      .botoes {
+        flex-direction: column;
+      }
+      input[type="url"] {
+        font-size: 1em;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="conteudo">
+    <h1>Seleção de Links</h1>
+    <div id="categorias"></div>
+  </div>
+
+  <script>
+    const categorias = [
+      "INTELIGÊNCIA ARTIFICIAL",
+      "INOVAÇÃO TECNOLÓGICA",
+      "SAÚDE E TECNOLOGIA",
+      "BUGOU!",
+      "NOTÍCIAS VARIADAS",
+      "CURIOSIDADES, ANÁLISES E DICAS"
+    ];
+
+    const container = document.getElementById("categorias");
+
+    function salvarLocalStorage() {
+      const dados = {};
+      categorias.forEach(cat => {
+        const bloco = document.querySelector(`[data-categoria='${cat}']`);
+        const urls = Array.from(bloco.querySelectorAll("input[type='url']")).map(input => input.value);
+        dados[cat] = urls;
+      });
+      localStorage.setItem("linksPorCategoria", JSON.stringify(dados));
+    }
+
+    function carregarLocalStorage() {
+      const dados = JSON.parse(localStorage.getItem("linksPorCategoria") || "{}");
+      categorias.forEach(cat => {
+        const div = document.createElement("div");
+        div.className = "categoria";
+        div.setAttribute("data-categoria", cat);
+        div.innerHTML = `
+          <h2>${cat} <span class="contador">0</span></h2>
+          <div class="links"></div>
+          <button class="btn btn-add" onclick="inserirLink(this)">Adicionar Linha</button>
+        `;
+        container.appendChild(div);
+
+        const linksSalvos = dados[cat] || [];
+        linksSalvos.forEach(url => {
+          const linksDiv = div.querySelector(".links");
+          const linha = criarLinha(url);
+          linksDiv.appendChild(linha);
+        });
+        atualizarContador(div);
+      });
+    }
+
+    function inserirLink(botao) {
+      const divCategoria = botao.parentElement;
+      const linksDiv = divCategoria.querySelector(".links");
+      const linha = criarLinha();
+      linksDiv.appendChild(linha);
+      salvarLocalStorage();
+      atualizarContador(divCategoria);
+    }
+
+    function criarLinha(url = "") {
+      const linha = document.createElement("div");
+      linha.className = "link-row";
+      linha.innerHTML = `
+        <span class="link-destaque"></span>
+        <input type="url" placeholder="Cole aqui a URL da matéria" value="${url}" oninput="atualizarTitulo(this); salvarLocalStorage();">
+        <div class="botoes">
+          <button class="btn btn-remove" onclick="removerLinha(this)">Remover</button>
+          <button class="btn btn-copy" onclick="copiarLink(this)">Copiar</button>
+        </div>
+      `;
+      if (url) atualizarTitulo(linha.querySelector("input"));
+      return linha;
+    }
+
+    function removerLinha(botao) {
+      const linha = botao.closest(".link-row");
+      const divCategoria = linha.closest(".categoria");
+      linha.remove();
+      salvarLocalStorage();
+      atualizarContador(divCategoria);
+    }
+
+    function copiarLink(botao) {
+      const input = botao.closest(".link-row").querySelector("input[type='url']");
+      if (input && input.value) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          botao.textContent = "Copiado!";
+          setTimeout(() => botao.textContent = "Copiar", 1500);
+        });
+      }
+    }
+
+    function atualizarTitulo(input) {
+      const url = input.value;
+      try {
+        const u = new URL(url);
+        const pathParts = u.pathname.split('/').filter(Boolean);
+        const titulo = pathParts.length > 0 ? decodeURIComponent(pathParts[pathParts.length - 1]).replace(/[-_]/g, ' ') : u.hostname;
+        const destaque = input.parentElement.querySelector(".link-destaque");
+        destaque.textContent = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+      } catch (e) {
+        input.parentElement.querySelector(".link-destaque").textContent = '';
+      }
+    }
+
+    function atualizarContador(divCategoria) {
+      const contador = divCategoria.querySelector(".contador");
+      const quantidade = divCategoria.querySelectorAll(".link-row").length;
+      contador.textContent = quantidade;
+    }
+
+    carregarLocalStorage();
+  </script>
+
+</body>
+</html>
