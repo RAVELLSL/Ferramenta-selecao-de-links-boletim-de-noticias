@@ -47,7 +47,7 @@
     h1 {
       text-align: center;
       color: var(--titulo);
-      margin-bottom: 40px;
+      margin-bottom: 30px;
       font-size: 2em;
     }
 
@@ -67,6 +67,47 @@
       padding: 4px 8px;
       border-radius: 20px;
       margin-left: 10px;
+    }
+
+    .menu-categorias {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .menu-btn {
+      background-color: var(--card);
+      border: 2px solid var(--borda);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: bold;
+      color: var(--titulo);
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .menu-btn:hover {
+      background-color: var(--botao-copy);
+      color: white;
+    }
+
+    .menu-btn.ativo {
+      background-color: var(--botao-copy);
+      color: white;
+      border-color: var(--botao-copy);
+    }
+
+    .menu-btn.fechar-tudo {
+      background-color: transparent;
+      border: 2px dashed var(--borda);
+      color: var(--subtitulo);
+    }
+
+    .menu-btn.fechar-tudo:hover {
+      background-color: #ccc;
+      color: #000;
     }
 
     .categoria {
@@ -155,9 +196,9 @@
   </style>
 </head>
 <body>
-
   <div class="conteudo">
     <h1>Seleção de Links</h1>
+    <nav class="menu-categorias" id="menu-categorias"></nav>
     <div id="categorias"></div>
   </div>
 
@@ -172,6 +213,8 @@
     ];
 
     const container = document.getElementById("categorias");
+    const menu = document.getElementById("menu-categorias");
+    let categoriaAtual = null;
 
     function salvarLocalStorage() {
       const dados = {};
@@ -185,10 +228,20 @@
 
     function carregarLocalStorage() {
       const dados = JSON.parse(localStorage.getItem("linksPorCategoria") || "{}");
+
       categorias.forEach(cat => {
+        // Criar botão do menu
+        const linkMenu = document.createElement("button");
+        linkMenu.textContent = cat;
+        linkMenu.className = "menu-btn";
+        linkMenu.onclick = () => mostrarCategoria(cat, linkMenu);
+        menu.appendChild(linkMenu);
+
+        // Criar card da categoria (inicialmente oculto)
         const div = document.createElement("div");
         div.className = "categoria";
         div.setAttribute("data-categoria", cat);
+        div.style.display = "none";
         div.innerHTML = `
           <h2>${cat} <span class="contador">0</span></h2>
           <div class="links"></div>
@@ -204,6 +257,38 @@
         });
         atualizarContador(div);
       });
+
+      // Botão Fechar Tudo
+      const btnFecharTudo = document.createElement("button");
+      btnFecharTudo.textContent = "Fechar tudo";
+      btnFecharTudo.className = "menu-btn fechar-tudo";
+      btnFecharTudo.onclick = () => {
+        document.querySelectorAll(".categoria").forEach(div => div.style.display = "none");
+        document.querySelectorAll(".menu-btn").forEach(btn => btn.classList.remove("ativo"));
+        categoriaAtual = null;
+      };
+      menu.appendChild(btnFecharTudo);
+    }
+
+    function mostrarCategoria(cat, btn) {
+      const todasCategorias = document.querySelectorAll(".categoria");
+      const todosBotoes = document.querySelectorAll(".menu-btn");
+
+      if (categoriaAtual === cat) {
+        todasCategorias.forEach(div => div.style.display = "none");
+        todosBotoes.forEach(b => b.classList.remove("ativo"));
+        categoriaAtual = null;
+      } else {
+        todasCategorias.forEach(div => {
+          div.style.display = div.getAttribute("data-categoria") === cat ? "block" : "none";
+        });
+
+        todosBotoes.forEach(b => {
+          b.classList.toggle("ativo", b.textContent === cat);
+        });
+
+        categoriaAtual = cat;
+      }
     }
 
     function inserirLink(botao) {
@@ -269,6 +354,5 @@
 
     carregarLocalStorage();
   </script>
-
 </body>
 </html>
