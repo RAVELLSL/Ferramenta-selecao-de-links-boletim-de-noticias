@@ -18,18 +18,15 @@
       --destaque: #d35400;
       --sombra: rgba(0, 0, 0, 0.05);
     }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-
     html, body {
       width: 100%;
       height: 100%;
     }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: var(--fundo);
@@ -38,28 +35,24 @@
       justify-content: center;
       padding: 30px 20px;
     }
-
     .conteudo {
       width: 100%;
       max-width: 960px;
     }
-
     h1 {
       text-align: center;
       color: var(--titulo);
       margin-bottom: 30px;
       font-size: 2em;
     }
-
     h2 {
       color: var(--subtitulo);
       font-size: 1.3em;
-      margin-bottom: 20px;
+      margin-bottom: 10px; /* Ajustado para acomodar o botão abaixo */
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-
     .contador {
       background-color: var(--botao-copy);
       color: var(--card);
@@ -68,7 +61,6 @@
       border-radius: 20px;
       margin-left: 10px;
     }
-
     .menu-categorias {
       display: flex;
       flex-wrap: wrap;
@@ -76,7 +68,6 @@
       justify-content: center;
       margin-bottom: 30px;
     }
-
     .menu-btn {
       background-color: var(--card);
       border: 2px solid var(--borda);
@@ -87,29 +78,24 @@
       cursor: pointer;
       transition: background 0.2s ease;
     }
-
     .menu-btn:hover {
       background-color: var(--botao-copy);
       color: white;
     }
-
     .menu-btn.ativo {
       background-color: var(--botao-copy);
       color: white;
       border-color: var(--botao-copy);
     }
-
     .menu-btn.fechar-tudo {
       background-color: transparent;
       border: 2px dashed var(--borda);
       color: var(--subtitulo);
     }
-
     .menu-btn.fechar-tudo:hover {
       background-color: #ccc;
       color: #000;
     }
-
     .categoria {
       background-color: var(--card);
       padding: 25px;
@@ -118,14 +104,15 @@
       border: 1px solid var(--borda);
       margin-bottom: 30px;
     }
-
+    .categoria > .btn-add { /* Estilo para o botão Adicionar Link no topo da categoria */
+        margin-bottom: 20px; /* Espaçamento entre o botão e a lista de links */
+    }
     .link-row {
       display: flex;
       flex-direction: column;
       gap: 6px;
       margin-bottom: 18px;
     }
-
     input[type="url"] {
       padding: 10px 14px;
       border-radius: 10px;
@@ -133,12 +120,10 @@
       font-size: 0.95em;
       width: 100%;
     }
-
     input[type="url"]:focus {
       border-color: var(--subtitulo);
       outline: none;
     }
-
     .btn {
       padding: 8px 14px;
       font-weight: bold;
@@ -146,42 +131,35 @@
       border-radius: 10px;
       cursor: pointer;
       transition: background 0.2s ease, transform 0.2s ease;
-      margin-top: 5px;
+      margin-top: 5px; /* Removido o margin-top: 10px do .btn-add específico */
       font-size: 0.9em;
     }
-
     .btn:hover {
       transform: scale(1.05);
     }
-
     .btn-add {
       background-color: var(--botao-add);
       color: #145a32;
-      margin-top: 10px;
+      /* margin-top: 10px; */ /* Movido para .categoria > .btn-add para especificidade */
     }
-
     .btn-remove {
       background-color: var(--botao-remove);
       color: #641e16;
     }
-
     .btn-copy {
       background-color: var(--botao-copy);
       color: #154360;
     }
-
     .botoes {
       display: flex;
       gap: 8px;
       margin-top: 5px;
     }
-
     .link-destaque {
       font-weight: bold;
       font-size: 1em;
       color: var(--destaque);
     }
-
     @media (max-width: 600px) {
       .btn {
         width: 100%;
@@ -220,7 +198,8 @@
       const dados = {};
       categorias.forEach(cat => {
         const bloco = document.querySelector(`[data-categoria='${cat}']`);
-        const urls = Array.from(bloco.querySelectorAll("input[type='url']")).map(input => input.value);
+        // Seleciona os inputs dentro da div .links para garantir a ordem correta
+        const urls = Array.from(bloco.querySelectorAll(".links input[type='url']")).map(input => input.value);
         dados[cat] = urls;
       });
       localStorage.setItem("linksPorCategoria", JSON.stringify(dados));
@@ -242,18 +221,34 @@
         div.className = "categoria";
         div.setAttribute("data-categoria", cat);
         div.style.display = "none";
-        div.innerHTML = `
-          <h2>${cat} <span class="contador">0</span></h2>
-          <div class="links"></div>
-          <button class="btn btn-add" onclick="inserirLink(this)">Adicionar Linha</button>
-        `;
+
+        // Criar título H2
+        const h2 = document.createElement("h2");
+        h2.innerHTML = `${cat} <span class="contador">0</span>`;
+
+        // Criar botão "Adicionar Link"
+        const addButton = document.createElement("button");
+        addButton.className = "btn btn-add";
+        addButton.textContent = "Adicionar Link";
+        addButton.onclick = function() { inserirLink(div); }; // Passa a div da categoria
+
+        // Criar container para os links
+        const linksDiv = document.createElement("div");
+        linksDiv.className = "links";
+
+        // Adicionar elementos à div da categoria na ordem correta
+        div.appendChild(h2);
+        div.appendChild(addButton); // Botão Adicionar Link logo abaixo do título
+        div.appendChild(linksDiv);  // Container de links abaixo do botão
+
         container.appendChild(div);
 
         const linksSalvos = dados[cat] || [];
+        // Adiciona os links salvos ao linksDiv. A ordem de salvamento/carregamento
+        // garante que os mais recentes (se salvos no topo) apareçam no topo.
         linksSalvos.forEach(url => {
-          const linksDiv = div.querySelector(".links");
           const linha = criarLinha(url);
-          linksDiv.appendChild(linha);
+          linksDiv.appendChild(linha); // Mantém appendChild para carregar na ordem salva
         });
         atualizarContador(div);
       });
@@ -282,21 +277,24 @@
         todasCategorias.forEach(div => {
           div.style.display = div.getAttribute("data-categoria") === cat ? "block" : "none";
         });
-
         todosBotoes.forEach(b => {
           b.classList.toggle("ativo", b.textContent === cat);
         });
-
         categoriaAtual = cat;
       }
     }
 
-    function inserirLink(botao) {
-      const divCategoria = botao.parentElement;
+    function inserirLink(divCategoria) { // Argumento agora é a div da categoria
       const linksDiv = divCategoria.querySelector(".links");
       const linha = criarLinha();
-      linksDiv.appendChild(linha);
-      salvarLocalStorage();
+      linksDiv.prepend(linha); // <<< ALTERAÇÃO PRINCIPAL: Adiciona no início da lista de links
+      
+      const novoInput = linha.querySelector("input[type='url']");
+      if (novoInput) {
+        novoInput.focus(); // Foca no novo input
+      }
+      
+      salvarLocalStorage(); // Salva o estado atual (novo link estará no topo)
       atualizarContador(divCategoria);
     }
 
@@ -311,7 +309,13 @@
           <button class="btn btn-copy" onclick="copiarLink(this)">Copiar</button>
         </div>
       `;
-      if (url) atualizarTitulo(linha.querySelector("input"));
+      if (url) {
+        // Timeout para garantir que o DOM está pronto, especialmente se a função for chamada rapidamente
+        setTimeout(() => {
+            const inputElement = linha.querySelector("input[type='url']");
+            if (inputElement) atualizarTitulo(inputElement);
+        }, 0);
+      }
       return linha;
     }
 
@@ -329,20 +333,43 @@
         navigator.clipboard.writeText(input.value).then(() => {
           botao.textContent = "Copiado!";
           setTimeout(() => botao.textContent = "Copiar", 1500);
+        }).catch(err => {
+          console.error('Erro ao copiar link: ', err);
+          // Poderia adicionar um feedback visual de erro aqui se desejado
         });
       }
     }
 
     function atualizarTitulo(input) {
       const url = input.value;
+      const linkDestaqueElement = input.parentElement.querySelector(".link-destaque");
+      if (!linkDestaqueElement) return; // Segurança
+
       try {
-        const u = new URL(url);
+        if (!url.trim()) { // Se a URL estiver vazia ou só com espaços
+            linkDestaqueElement.textContent = '';
+            return;
+        }
+        // Adiciona http:// como padrão se não houver protocolo, para new URL funcionar
+        let fullUrl = url;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            fullUrl = 'http://' + url;
+        }
+        const u = new URL(fullUrl);
         const pathParts = u.pathname.split('/').filter(Boolean);
-        const titulo = pathParts.length > 0 ? decodeURIComponent(pathParts[pathParts.length - 1]).replace(/[-_]/g, ' ') : u.hostname;
-        const destaque = input.parentElement.querySelector(".link-destaque");
-        destaque.textContent = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+        let titulo = pathParts.length > 0 ? decodeURIComponent(pathParts[pathParts.length - 1]).replace(/[-_]/g, ' ') : u.hostname;
+        // Tenta remover extensões comuns de arquivo do título se for o último path part
+        titulo = titulo.replace(/\.(html|htm|php|asp|aspx|jsp)$/i, '');
+        
+        linkDestaqueElement.textContent = titulo.charAt(0).toUpperCase() + titulo.slice(1);
       } catch (e) {
-        input.parentElement.querySelector(".link-destaque").textContent = '';
+        // Se a URL for inválida, tenta extrair algo significativo ou deixa em branco
+        const fallbackTitle = url.split('/').pop().replace(/[-_]/g, ' ') || url;
+        if (fallbackTitle && fallbackTitle !== 'http:' && fallbackTitle !== 'https:') {
+            linkDestaqueElement.textContent = fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1);
+        } else {
+            linkDestaqueElement.textContent = '';
+        }
       }
     }
 
