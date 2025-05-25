@@ -25,7 +25,7 @@
     }
     html, body {
       width: 100%;
-      height: 100%;
+      min-height: 100%; /* Garante que o body ocupe pelo menos a altura da viewport */
     }
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -42,13 +42,20 @@
     h1 {
       text-align: center;
       color: var(--titulo);
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       font-size: 2em;
+    }
+    .acoes-globais {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 25px;
+      flex-wrap: wrap; /* Permite que os botões quebrem linha em telas menores */
     }
     h2 {
       color: var(--subtitulo);
       font-size: 1.3em;
-      margin-bottom: 10px; /* Ajustado para acomodar o botão abaixo */
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -76,11 +83,13 @@
       font-weight: bold;
       color: var(--titulo);
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      font-size: 0.9em; /* Padronizando o tamanho da fonte para botões de menu */
     }
     .menu-btn:hover {
       background-color: var(--botao-copy);
       color: white;
+      border-color: var(--botao-copy);
     }
     .menu-btn.ativo {
       background-color: var(--botao-copy);
@@ -95,6 +104,7 @@
     .menu-btn.fechar-tudo:hover {
       background-color: #ccc;
       color: #000;
+      border-color: #ccc;
     }
     .categoria {
       background-color: var(--card);
@@ -104,8 +114,8 @@
       border: 1px solid var(--borda);
       margin-bottom: 30px;
     }
-    .categoria > .btn-add { /* Estilo para o botão Adicionar Link no topo da categoria */
-        margin-bottom: 20px; /* Espaçamento entre o botão e a lista de links */
+    .categoria > .btn-add {
+        margin-bottom: 20px;
     }
     .link-row {
       display: flex;
@@ -131,7 +141,7 @@
       border-radius: 10px;
       cursor: pointer;
       transition: background 0.2s ease, transform 0.2s ease;
-      margin-top: 5px; /* Removido o margin-top: 10px do .btn-add específico */
+      margin-top: 5px;
       font-size: 0.9em;
     }
     .btn:hover {
@@ -140,7 +150,6 @@
     .btn-add {
       background-color: var(--botao-add);
       color: #145a32;
-      /* margin-top: 10px; */ /* Movido para .categoria > .btn-add para especificidade */
     }
     .btn-remove {
       background-color: var(--botao-remove);
@@ -159,23 +168,58 @@
       font-weight: bold;
       font-size: 1em;
       color: var(--destaque);
+      min-height: 1.2em;
+      display: block;
+      word-break: break-word; /* Para quebrar títulos longos */
     }
     @media (max-width: 600px) {
-      .btn {
+      body {
+        padding: 20px 10px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+      .menu-btn { /* Aplicar a todos os botões de menu, incluindo exportar/importar */
+        width: calc(50% - 5px); /* Dois botões por linha nas ações globais */
+        font-size: 0.85em;
+      }
+      .menu-categorias .menu-btn { /* Específico para botões de categoria se precisar de ajuste diferente */
+         width: auto; /* Deixar os botões de categoria com largura automática */
+      }
+      .btn { /* Botões dentro dos cards */
         width: 100%;
       }
-      .botoes {
+      .botoes { /* Container dos botões Remover/Copiar */
         flex-direction: column;
       }
       input[type="url"] {
         font-size: 1em;
       }
+      .acoes-globais .menu-btn { /* Garante que os botões de exportar/importar tenham largura */
+         width: calc(50% - 5px);
+      }
+       /* Se houver um número ímpar de botões nas ações globais e quiser que o último ocupe a largura total */
+      .acoes-globais .menu-btn:last-child:nth-child(odd) {
+        /* width: 100%; */ /* Descomente se tiver um terceiro botão e quiser que ele ocupe a largura total */
+      }
+    }
+    @media (max-width: 400px) {
+        .acoes-globais .menu-btn {
+            width: 100%; /* Um botão por linha em telas muito pequenas */
+        }
     }
   </style>
 </head>
 <body>
   <div class="conteudo">
     <h1>Seleção de Links</h1>
+
+    <div class="acoes-globais">
+      <button id="btnExportar" class="menu-btn">Exportar Dados</button>
+      <input type="file" id="inputImportar" accept=".json" style="display: none;">
+      <button id="btnImportarTrigger" class="menu-btn">Importar Dados</button>
+    </div>
+
     <nav class="menu-categorias" id="menu-categorias"></nav>
     <div id="categorias"></div>
   </div>
@@ -197,104 +241,111 @@
     function salvarLocalStorage() {
       const dados = {};
       categorias.forEach(cat => {
-        const bloco = document.querySelector(`[data-categoria='${cat}']`);
-        // Seleciona os inputs dentro da div .links para garantir a ordem correta
-        const urls = Array.from(bloco.querySelectorAll(".links input[type='url']")).map(input => input.value);
-        dados[cat] = urls;
+        const bloco = document.querySelector(`.categoria[data-categoria='${cat}']`); // Seletor mais específico
+        if (bloco) {
+            const urls = Array.from(bloco.querySelectorAll(".links input[type='url']")).map(input => input.value);
+            dados[cat] = urls;
+        } else {
+            // Se a categoria está na constante `categorias` mas o elemento não foi encontrado no DOM,
+            // significa que não há links para salvar para ela ou o card não existe/foi removido.
+            // Para manter a consistência, se `dados[cat]` não for definido, ao carregar, será tratado como `[]`.
+            // Se quisermos garantir que todas as `categorias` estejam no JSON salvo, mesmo vazias:
+            // dados[cat] = dados[cat] || []; // mas isso é redundante se o bloco não for encontrado.
+            // A lógica atual de pegar `dados[cat] || []` em `carregarLocalStorage` já cobre isso.
+        }
       });
       localStorage.setItem("linksPorCategoria", JSON.stringify(dados));
     }
 
     function carregarLocalStorage() {
+      menu.innerHTML = "";
+      container.innerHTML = "";
+      categoriaAtual = null;
+
       const dados = JSON.parse(localStorage.getItem("linksPorCategoria") || "{}");
 
       categorias.forEach(cat => {
-        // Criar botão do menu
         const linkMenu = document.createElement("button");
         linkMenu.textContent = cat;
         linkMenu.className = "menu-btn";
         linkMenu.onclick = () => mostrarCategoria(cat, linkMenu);
         menu.appendChild(linkMenu);
 
-        // Criar card da categoria (inicialmente oculto)
         const div = document.createElement("div");
         div.className = "categoria";
         div.setAttribute("data-categoria", cat);
         div.style.display = "none";
 
-        // Criar título H2
         const h2 = document.createElement("h2");
         h2.innerHTML = `${cat} <span class="contador">0</span>`;
 
-        // Criar botão "Adicionar Link"
         const addButton = document.createElement("button");
         addButton.className = "btn btn-add";
         addButton.textContent = "Adicionar Link";
-        addButton.onclick = function() { inserirLink(div); }; // Passa a div da categoria
+        addButton.onclick = function() { inserirLink(div); };
 
-        // Criar container para os links
         const linksDiv = document.createElement("div");
         linksDiv.className = "links";
 
-        // Adicionar elementos à div da categoria na ordem correta
         div.appendChild(h2);
-        div.appendChild(addButton); // Botão Adicionar Link logo abaixo do título
-        div.appendChild(linksDiv);  // Container de links abaixo do botão
-
+        div.appendChild(addButton);
+        div.appendChild(linksDiv);
         container.appendChild(div);
 
         const linksSalvos = dados[cat] || [];
-        // Adiciona os links salvos ao linksDiv. A ordem de salvamento/carregamento
-        // garante que os mais recentes (se salvos no topo) apareçam no topo.
         linksSalvos.forEach(url => {
           const linha = criarLinha(url);
-          linksDiv.appendChild(linha); // Mantém appendChild para carregar na ordem salva
+          linksDiv.appendChild(linha); // Adiciona na ordem salva (FIFO para o array, mantendo a ordem de prepend)
         });
         atualizarContador(div);
       });
 
-      // Botão Fechar Tudo
       const btnFecharTudo = document.createElement("button");
       btnFecharTudo.textContent = "Fechar tudo";
       btnFecharTudo.className = "menu-btn fechar-tudo";
       btnFecharTudo.onclick = () => {
         document.querySelectorAll(".categoria").forEach(div => div.style.display = "none");
-        document.querySelectorAll(".menu-btn").forEach(btn => btn.classList.remove("ativo"));
+        document.querySelectorAll("#menu-categorias .menu-btn").forEach(btn => btn.classList.remove("ativo")); // Apenas botões de categoria
         categoriaAtual = null;
       };
       menu.appendChild(btnFecharTudo);
     }
 
-    function mostrarCategoria(cat, btn) {
-      const todasCategorias = document.querySelectorAll(".categoria");
-      const todosBotoes = document.querySelectorAll(".menu-btn");
+    function mostrarCategoria(cat, btnClicado) {
+      const todasCategoriasDivs = document.querySelectorAll(".categoria");
+      // Seleciona apenas os botões de categoria dentro do menu principal para o estado ativo/inativo
+      const todosBotoesDeCategoria = document.querySelectorAll("#menu-categorias .menu-btn:not(.fechar-tudo)");
 
-      if (categoriaAtual === cat) {
-        todasCategorias.forEach(div => div.style.display = "none");
-        todosBotoes.forEach(b => b.classList.remove("ativo"));
+      if (categoriaAtual === cat) { // Se a categoria clicada já está ativa, fecha ela
+        todasCategoriasDivs.forEach(div => div.style.display = "none");
+        todosBotoesDeCategoria.forEach(b => b.classList.remove("ativo"));
         categoriaAtual = null;
-      } else {
-        todasCategorias.forEach(div => {
+      } else { // Se é uma nova categoria ou nenhuma estava ativa
+        todasCategoriasDivs.forEach(div => {
           div.style.display = div.getAttribute("data-categoria") === cat ? "block" : "none";
         });
-        todosBotoes.forEach(b => {
-          b.classList.toggle("ativo", b.textContent === cat);
+        todosBotoesDeCategoria.forEach(b => {
+          b.classList.remove("ativo"); // Remove 'ativo' de todos primeiro
         });
+        if (btnClicado) { // Adiciona 'ativo' apenas ao botão clicado
+             btnClicado.classList.add("ativo");
+        }
         categoriaAtual = cat;
       }
     }
 
-    function inserirLink(divCategoria) { // Argumento agora é a div da categoria
+    function inserirLink(divCategoria) {
       const linksDiv = divCategoria.querySelector(".links");
-      const linha = criarLinha();
-      linksDiv.prepend(linha); // <<< ALTERAÇÃO PRINCIPAL: Adiciona no início da lista de links
-      
+      const linha = criarLinha(); // Cria uma linha com input vazio
+      linksDiv.prepend(linha); // Adiciona no início da lista visual de links
       const novoInput = linha.querySelector("input[type='url']");
       if (novoInput) {
-        novoInput.focus(); // Foca no novo input
+        novoInput.focus();
       }
-      
-      salvarLocalStorage(); // Salva o estado atual (novo link estará no topo)
+      // Não é necessário chamar salvarLocalStorage() aqui se o input vazio não deve ser salvo
+      // Ele será salvo quando o usuário digitar algo, devido ao oninput no input.
+      // No entanto, para consistência de ter uma linha "vazia" salva se o usuário não digitar nada:
+      salvarLocalStorage(); // Salva o estado atual (novo link, possivelmente vazio, estará no topo)
       atualizarContador(divCategoria);
     }
 
@@ -309,9 +360,8 @@
           <button class="btn btn-copy" onclick="copiarLink(this)">Copiar</button>
         </div>
       `;
-      if (url) {
-        // Timeout para garantir que o DOM está pronto, especialmente se a função for chamada rapidamente
-        setTimeout(() => {
+      if (url) { // Se uma URL foi passada (ao carregar do storage)
+        setTimeout(() => { // Timeout para garantir que o DOM esteja pronto
             const inputElement = linha.querySelector("input[type='url']");
             if (inputElement) atualizarTitulo(inputElement);
         }, 0);
@@ -331,55 +381,166 @@
       const input = botao.closest(".link-row").querySelector("input[type='url']");
       if (input && input.value) {
         navigator.clipboard.writeText(input.value).then(() => {
+          const originalText = botao.textContent;
           botao.textContent = "Copiado!";
-          setTimeout(() => botao.textContent = "Copiar", 1500);
+          botao.disabled = true;
+          setTimeout(() => {
+            botao.textContent = originalText;
+            botao.disabled = false;
+          }, 1500);
         }).catch(err => {
           console.error('Erro ao copiar link: ', err);
-          // Poderia adicionar um feedback visual de erro aqui se desejado
+          alert('Erro ao copiar link. Verifique as permissões do navegador ou o console para mais detalhes.');
         });
+      } else {
+        alert("Não há link para copiar.");
       }
     }
 
     function atualizarTitulo(input) {
       const url = input.value;
       const linkDestaqueElement = input.parentElement.querySelector(".link-destaque");
-      if (!linkDestaqueElement) return; // Segurança
+      if (!linkDestaqueElement) return;
+
+      if (!url.trim()) {
+          linkDestaqueElement.textContent = '';
+          return;
+      }
 
       try {
-        if (!url.trim()) { // Se a URL estiver vazia ou só com espaços
-            linkDestaqueElement.textContent = '';
-            return;
-        }
-        // Adiciona http:// como padrão se não houver protocolo, para new URL funcionar
         let fullUrl = url;
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        if (!url.match(/^https?:\/\//i)) { // Verifica se não começa com http:// ou https:// (case-insensitive)
             fullUrl = 'http://' + url;
         }
         const u = new URL(fullUrl);
-        const pathParts = u.pathname.split('/').filter(Boolean);
-        let titulo = pathParts.length > 0 ? decodeURIComponent(pathParts[pathParts.length - 1]).replace(/[-_]/g, ' ') : u.hostname;
-        // Tenta remover extensões comuns de arquivo do título se for o último path part
-        titulo = titulo.replace(/\.(html|htm|php|asp|aspx|jsp)$/i, '');
-        
-        linkDestaqueElement.textContent = titulo.charAt(0).toUpperCase() + titulo.slice(1);
-      } catch (e) {
-        // Se a URL for inválida, tenta extrair algo significativo ou deixa em branco
-        const fallbackTitle = url.split('/').pop().replace(/[-_]/g, ' ') || url;
-        if (fallbackTitle && fallbackTitle !== 'http:' && fallbackTitle !== 'https:') {
-            linkDestaqueElement.textContent = fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1);
-        } else {
-            linkDestaqueElement.textContent = '';
+        let titulo = u.hostname; // Fallback para o hostname
+        const pathParts = u.pathname.split('/').filter(part => part && part !== '/');
+
+        if (pathParts.length > 0) {
+            let ultimoSegmento = decodeURIComponent(pathParts[pathParts.length - 1]);
+            // Remove extensões comuns de arquivo
+            ultimoSegmento = ultimoSegmento.replace(/\.(html|htm|php|asp|aspx|jsp|pdf|md|xml|json|txt)$/i, '');
+            // Remove parâmetros de query se o último segmento ainda parecer uma URL base
+            if (ultimoSegmento.includes('?')) {
+                ultimoSegmento = ultimoSegmento.split('?')[0];
+            }
+             // Substitui hifens e underscores por espaços
+            titulo = ultimoSegmento.replace(/[-_]/g, ' ');
         }
+
+        // Tenta capitalizar cada palavra
+        titulo = titulo.split(' ')
+                       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                       .join(' ');
+        linkDestaqueElement.textContent = titulo;
+
+      } catch (e) { // Se a URL for inválida
+        const fallbackTitleParts = url.split('/');
+        const ultimoSegmentoFallback = fallbackTitleParts.pop() || fallbackTitleParts.pop() || url; // Tenta o último ou penúltimo segmento
+        let fallbackTitle = ultimoSegmentoFallback.replace(/[-_]/g, ' ').replace(/\.(html|htm|php|asp|aspx|jsp|pdf|md)$/i, '');
+
+        if (fallbackTitle && fallbackTitle.toLowerCase() !== 'http:' && fallbackTitle.toLowerCase() !== 'https:') {
+            fallbackTitle = fallbackTitle.split(' ')
+                                       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                       .join(' ');
+            linkDestaqueElement.textContent = fallbackTitle;
+        } else {
+            linkDestaqueElement.textContent = 'Título indisponível';
+        }
+        // console.warn("Não foi possível parsear a URL para gerar título:", url, e);
       }
     }
 
     function atualizarContador(divCategoria) {
-      const contador = divCategoria.querySelector(".contador");
-      const quantidade = divCategoria.querySelectorAll(".link-row").length;
-      contador.textContent = quantidade;
+      const contador = divCategoria.querySelector("h2 .contador"); // Seletor mais específico
+      if (contador) {
+        const quantidade = divCategoria.querySelectorAll(".links .link-row").length;
+        contador.textContent = quantidade;
+      }
     }
 
+    function exportarDados() {
+      const dadosString = localStorage.getItem("linksPorCategoria");
+      if (!dadosString || dadosString === "{}") {
+        alert("Não há dados para exportar.");
+        return;
+      }
+
+      const blob = new Blob([dadosString], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dataFormatada = new Date().toISOString().slice(0,10).replace(/-/g, ''); // AAAAMMDD
+      a.download = `links_exportados_${dataFormatada}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert("Dados exportados com sucesso como " + a.download + "!");
+    }
+
+    function importarDados(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
+
+      if (file.type !== "application/json") {
+        alert("Por favor, selecione um arquivo JSON válido (.json).");
+        event.target.value = null;
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const dadosImportados = JSON.parse(e.target.result);
+
+          if (typeof dadosImportados !== 'object' || dadosImportados === null) {
+            throw new Error("O arquivo JSON não contém um objeto de dados válido.");
+          }
+
+          for (const key in dadosImportados) {
+            if (Object.hasOwnProperty.call(dadosImportados, key)) { // Verifica se a propriedade é do próprio objeto
+                if (typeof key !== 'string' || !Array.isArray(dadosImportados[key]) || !dadosImportados[key].every(item => typeof item === 'string')) {
+                    throw new Error(`Dados inválidos para a categoria "${key}". Esperado um array de URLs (strings).`);
+                }
+            }
+          }
+
+          if (!confirm("Atenção: Isso substituirá todos os links e categorias salvos atualmente. Deseja continuar?")) {
+            event.target.value = null;
+            return;
+          }
+
+          localStorage.setItem("linksPorCategoria", JSON.stringify(dadosImportados));
+          carregarLocalStorage(); // Limpa e recarrega a UI com os novos dados
+          alert("Dados importados com sucesso! A página foi atualizada.");
+
+        } catch (error) {
+          console.error("Erro ao importar dados:", error);
+          alert(`Erro ao importar dados: ${error.message}\nVerifique se o arquivo está no formato correto e se os dados são válidos.`);
+        } finally {
+            event.target.value = null;
+        }
+      };
+      reader.onerror = function() {
+        alert("Erro ao ler o arquivo selecionado.");
+        event.target.value = null;
+      };
+      reader.readAsText(file);
+    }
+
+    // Carrega os dados iniciais e configura a UI
     carregarLocalStorage();
+
+    // Adiciona Event Listeners para os botões de exportar/importar
+    document.getElementById("btnExportar").addEventListener("click", exportarDados);
+    document.getElementById("btnImportarTrigger").addEventListener("click", () => {
+      document.getElementById("inputImportar").click();
+    });
+    document.getElementById("inputImportar").addEventListener("change", importarDados);
+
   </script>
 </body>
 </html>
